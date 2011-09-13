@@ -1,42 +1,57 @@
 require 'rubygems'
+require 'uri'
 require 'java'
+require 'rack'
 
 module JrubyRackMetrics
   class Monitor
-    attr_writer :metrics_registry, :default_duration_unit, :default_rate_unit
+    attr_reader :options
 
-    def initialize(app, name)
+    def initialize(app, opts = {})
       @app = app
-      @name = name
+      @options = default_options.merge(opts)
       @timing_unit = java.util.concurrent.TimeUnit::NANOSECONDS
+      if @options[:jmx_enabled]
+        com.yammer.metrics.reporting.JmxReporter.startDefault(metrics_registry)
+      end
+    end
+
+    def default_options
+      { :app_name => 'no-name',
+        :default_duration_unit => java.util.concurrent.TimeUnit::MILLISECONDS,
+        :default_rate_unit => java.util.concurrent.TimeUnit::SECONDS,
+        :jmx_enabled => false }
     end
 
     def metrics_registry
-      @metrics_registry ||= com.yammer.metrics.core.MetricsRegistry.new
+      @options[:metrics_registry] ||= com.yammer.metrics.core.MetricsRegistry.new
     end
 
-    def default_duration_unit
-      @default_duration_unit ||= java.util.concurrent.TimeUnit::MILLISECONDS
-    end
-
-    def default_rate_unit
-      @default_rate_unit ||= java.util.concurrent.TimeUnit::SECONDS
-    end
-
-    def call(env)
-      start_time = java.lang.System.nanoTime()
-      begin
+    def call(env = nil)
+      if env.nil?
         @app.call(env)
-      ensure
-        elapsed = java.lang.System.nanoTime() - start_time
-        if env['REQUEST_URI'] == "/"
-          type = "_root"
-        else
-          type = env['REQUEST_URI'].gsub(/[\/|\s|,|;|#|!]/, "_")
+      else
+        start_time = java.lang.System.nanoTime()
+        begin
+          @app.call(env)
+        ensure
+          elapsed = java.lang.System.nanoTime() - start_time
+          # some web servers give us the full url, some only the path part
+          uri = URI.parse(env['REQUEST_URI'])
+          if defined? uri.path && !uri.path.nil?
+            group = @options[:app_name]
+            if uri.path == "/"
+              type = "_root"
+            else
+              type = uri.path.gsub(/[\/|\s|,|;|#|!|:]/, "_")
+            end
+            name = env['REQUEST_METHOD'].downcase
+            metric_name = com.yammer.metrics.core.MetricName.new(group, type, name)
+            metrics_registry.newTimer(metric_name,
+                                      @options[:default_duration_unit],
+                                      @options[:default_rate_unit]).update(elapsed, @timing_unit)
+          end
         end
-        name = env['REQUEST_METHOD'].downcase
-        metric_name = com.yammer.metrics.core.MetricName.new(@name, type, name)
-        metrics_registry.newTimer(metric_name, default_duration_unit, default_rate_unit).update(elapsed, @timing_unit)
       end
     end
   end
