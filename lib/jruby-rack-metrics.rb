@@ -23,7 +23,7 @@ module JrubyRackMetrics
     end
 
     def metrics_registry
-      @options[:metrics_registry] ||= com.yammer.metrics.core.MetricsRegistry.new
+      @options[:metrics_registry] ||= com.yammer.metrics.Metrics.defaultRegistry
     end
 
     def call(env = nil)
