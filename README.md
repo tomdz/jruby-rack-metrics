@@ -48,6 +48,5 @@ Original author: Thomas Dudziak
 License
 -------
 
-Apache License version 2.0. See the LICENSE-2.0.txt file for the full
-license.
+Apache License version 2.0. See the LICENSE.txt file for the full license.
 
