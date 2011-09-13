@@ -17,8 +17,7 @@ module JrubyRackMetrics
     end
 
     def default_options
-      { :app_name => 'no-name',
-        :default_duration_unit => java.util.concurrent.TimeUnit::MILLISECONDS,
+      { :default_duration_unit => java.util.concurrent.TimeUnit::MILLISECONDS,
         :default_rate_unit => java.util.concurrent.TimeUnit::SECONDS,
         :jmx_enabled => false }
     end
@@ -33,19 +32,20 @@ module JrubyRackMetrics
       else
         start_time = java.lang.System.nanoTime()
         begin
-          @app.call(env)
+          status, headers, body = @app.call(env)
         ensure
           elapsed = java.lang.System.nanoTime() - start_time
           # some web servers give us the full url, some only the path part
           uri = URI.parse(env['REQUEST_URI'])
           if defined? uri.path && !uri.path.nil?
-            group = @options[:app_name]
             if uri.path == "/"
-              type = "_root"
+              group = "_root"
             else
-              type = uri.path.gsub(/[\/|\s|,|;|#|!|:]/, "_")
+              group = uri.path.gsub(/[\/|\s|,|;|#|!|:]/, "_")
+              group = group[1..-1] if group.start_with?("_")
             end
-            name = env['REQUEST_METHOD'].downcase
+            type = env['REQUEST_METHOD'].downcase
+            name = (status || 500).to_s
             metric_name = com.yammer.metrics.core.MetricName.new(group, type, name)
             metrics_registry.newTimer(metric_name,
                                       @options[:default_duration_unit],
