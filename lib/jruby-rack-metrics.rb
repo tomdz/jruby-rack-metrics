@@ -3,6 +3,12 @@ require 'uri'
 require 'java'
 require 'rack'
 
+java_import 'java.lang.System'
+java_import 'java.util.concurrent.TimeUnit'
+java_import 'com.yammer.metrics.Metrics'
+java_import 'com.yammer.metrics.core.MetricName'
+java_import 'com.yammer.metrics.reporting.JmxReporter'
+
 module JrubyRackMetrics
   class Monitor
     attr_reader :options
@@ -10,31 +16,31 @@ module JrubyRackMetrics
     def initialize(app, opts = {})
       @app = app
       @options = default_options.merge(opts)
-      @timing_unit = java.util.concurrent.TimeUnit::NANOSECONDS
+      @timing_unit = TimeUnit::NANOSECONDS
       if @options[:jmx_enabled]
-        com.yammer.metrics.reporting.JmxReporter.startDefault(metrics_registry)
+        JmxReporter.startDefault(metrics_registry)
       end
     end
 
     def default_options
-      { :default_duration_unit => java.util.concurrent.TimeUnit::MILLISECONDS,
-        :default_rate_unit => java.util.concurrent.TimeUnit::SECONDS,
+      { :default_duration_unit => TimeUnit::MILLISECONDS,
+        :default_rate_unit => TimeUnit::SECONDS,
         :jmx_enabled => false }
     end
 
     def metrics_registry
-      @options[:metrics_registry] ||= com.yammer.metrics.Metrics.defaultRegistry
+      @options[:metrics_registry] ||= Metrics.defaultRegistry
     end
 
     def call(env = nil)
       if env.nil?
         @app.call(env)
       else
-        start_time = java.lang.System.nanoTime()
+        start_time = System.nanoTime()
         begin
           status, headers, body = @app.call(env)
         ensure
-          elapsed = java.lang.System.nanoTime() - start_time
+          elapsed = System.nanoTime() - start_time
           # some web servers give us the full url, some only the path part
           uri = URI.parse(env['REQUEST_URI'])
           if defined? uri.path && !uri.path.nil?
@@ -46,7 +52,7 @@ module JrubyRackMetrics
             end
             type = env['REQUEST_METHOD'].downcase
             name = (status || 500).to_s
-            metric_name = com.yammer.metrics.core.MetricName.new(group, type, name)
+            metric_name = MetricName.new(group, type, name)
             metrics_registry.newTimer(metric_name,
                                       @options[:default_duration_unit],
                                       @options[:default_rate_unit]).update(elapsed, @timing_unit)
