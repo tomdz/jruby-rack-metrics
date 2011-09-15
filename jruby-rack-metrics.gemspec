@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{jruby-rack-metrics}
-  s.version = "0.0.2"
+  s.version = "0.0.3"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Thomas Dudziak"]
-  s.date = %q{2011-09-13}
+  s.date = %q{2011-09-15}
   s.description = %q{A simple rack app wrapper that gathers request metrics using Coda Hale's metrics library}
   s.email = %q{tomdzk@gmail.com}
   s.extra_rdoc_files = [
@@ -22,6 +22,7 @@ Gem::Specification.new do |s|
     "README.md",
     "Rakefile",
     "VERSION",
+    "jruby-rack-metrics.gemspec",
     "lib/jruby-rack-metrics.rb"
   ]
   s.homepage = %q{http://github.com/tomdz/jruby-rack-metrics}
