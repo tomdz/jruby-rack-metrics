@@ -44,21 +44,26 @@ module JrubyRackMetrics
           # some web servers give us the full url, some only the path part
           uri = URI.parse(env['REQUEST_URI'])
           if defined? uri.path && !uri.path.nil?
-            if uri.path == "/"
-              group = "_root"
-            else
-              group = uri.path.gsub(/[\/|\s|,|;|#|!|:]/, "_")
-              group = group[1..-1] if group.start_with?("_")
-            end
-            type = env['REQUEST_METHOD'].downcase
-            name = (status || 500).to_s
-            metric_name = MetricName.new(group, type, name)
+            metric_name = build_metric_name(uri, env, status, headers, body)
             metrics_registry.newTimer(metric_name,
                                       @options[:default_duration_unit],
                                       @options[:default_rate_unit]).update(elapsed, @timing_unit)
           end
         end
       end
+    end
+
+    def build_metric_name(uri, env, status, headers, body)
+      if uri.path == "/"
+        group = "_root"
+      else
+        group = uri.path.gsub(/[\/|\s|,|;|#|!|:]/, "_")
+        group = group[1..-1] if group.start_with?("_")
+      end
+      type = env['REQUEST_METHOD'].downcase
+      name = (status || 500).to_s
+
+      MetricName.new(group, type, name)
     end
   end
 end
