@@ -12,23 +12,28 @@ module JrubyRackMetrics
   class Monitor
     attr_reader :options
 
+    def self.start_default_jmx_reporter(metrics_registry=default_metrics_registry)
+      JmxReporter.startDefault(metrics_registry)
+    end
+
+    def self.default_metrics_registry
+      Metrics.defaultRegistry
+    end
+
     def initialize(app, opts = {})
       @app = app
       @options = default_options.merge(opts)
       @timing_unit = TimeUnit::NANOSECONDS
-      if @options[:jmx_enabled]
-        JmxReporter.startDefault(metrics_registry)
-      end
     end
 
     def default_options
       { :default_duration_unit => TimeUnit::MILLISECONDS,
         :default_rate_unit => TimeUnit::SECONDS,
-        :jmx_enabled => false }
+        :metrics_registry => self.class.default_metrics_registry }
     end
 
     def metrics_registry
-      @options[:metrics_registry] ||= Metrics.defaultRegistry
+      @options[:metrics_registry]
     end
 
     def call(env = nil)
