@@ -3,7 +3,6 @@ require 'uri'
 require 'java'
 require 'rack'
 
-java_import 'java.lang.System'
 java_import 'java.util.concurrent.TimeUnit'
 java_import 'com.yammer.metrics.Metrics'
 java_import 'com.yammer.metrics.core.MetricName'
@@ -36,11 +35,11 @@ module JrubyRackMetrics
       if env.nil?
         @app.call(env)
       else
-        start_time = System.nanoTime()
+        start_time = java.lang.System.nanoTime()
         begin
           status, headers, body = @app.call(env)
         ensure
-          elapsed = System.nanoTime() - start_time
+          elapsed = java.lang.System.nanoTime() - start_time
           # some web servers give us the full url, some only the path part
           uri = URI.parse(env['REQUEST_URI'])
           if defined? uri.path && !uri.path.nil?
